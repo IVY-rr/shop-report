@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>心情点歌台</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    background: #fafafa;
+    min-height: 100vh;
+  }
+  .page { display: none; }
+  .page.active { display: block; }
+  h2 { font-size: 20px; margin-bottom: 24px; color: #333; }
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    font-size: 15px;
+    cursor: pointer;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    background: #fff;
+    text-align: left;
+    transition: background 0.15s;
+  }
+  .btn:hover { background: #f0f0f0; }
+  .btn:active { background: #e4e4e4; }
+  #result { text-align: center; padding-top: 40px; }
+  #result p { color: #888; font-size: 14px; }
+  #song { font-size: 22px; font-weight: bold; margin: 20px 0; color: #333; }
+  #quote { color: #666; font-size: 16px; line-height: 1.6; }
+  .restart {
+    margin-top: 32px;
+    padding: 10px 28px;
+    font-size: 15px;
+    cursor: pointer;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    background: #fff;
+  }
+  .progress { font-size: 13px; color: #bbb; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+
+<div id="q1" class="page active">
+  <div class="progress">1 / 4</div>
+  <h2>此刻你的状态更接近？</h2>
+  <button class="btn" onclick="answer('q1','happy',2,'calm',1)">挺轻松，也有点开心</button>
+  <button class="btn" onclick="answer('q1','calm',2)">比较平静，没什么波动</button>
+  <button class="btn" onclick="answer('q1','anxious',2)">脑子停不下来，有点紧张</button>
+  <button class="btn" onclick="answer('q1','sad',2)">提不起劲，情绪偏低</button>
+  <button class="btn" onclick="answer('q1','irritated',2)">有点烦，容易被打扰</button>
+  <button class="btn" onclick="answer('q1','tired',2)">很累，只想放空</button>
+</div>
+
+<div id="q2" class="page">
+  <div class="progress">2 / 4</div>
+  <h2>最近一周，最常出现的感受是？</h2>
+  <button class="btn" onclick="answer('q2','happy',2)">有期待感</button>
+  <button class="btn" onclick="answer('q2','calm',2)">还算安稳</button>
+  <button class="btn" onclick="answer('q2','anxious',2)">担心事情做不好</button>
+  <button class="btn" onclick="answer('q2','sad',2)">有点孤独或失落</button>
+  <button class="btn" onclick="answer('q2','irritated',2)">容易生气或不耐烦</button>
+  <button class="btn" onclick="answer('q2','tired',2)">睡不够、没精神</button>
+</div>
+
+<div id="q3" class="page">
+  <div class="progress">3 / 4</div>
+  <h2>如果现在有一种颜色代表你，你会选？</h2>
+  <button class="btn" onclick="answer('q3','happy',2)">明亮黄</button>
+  <button class="btn" onclick="answer('q3','calm',2)">浅蓝 / 粉</button>
+  <button class="btn" onclick="answer('q3','sad',1,'anxious',1)">绿色</button>
+  <button class="btn" onclick="answer('q3','irritated',2)">红色</button>
+  <button class="btn" onclick="answer('q3','tired',2)">深灰</button>
+</div>
+
+<div id="q4" class="page">
+  <div class="progress">4 / 4</div>
+  <h2>如果让你选择一种方式释放情绪，你会选哪种？</h2>
+  <button class="btn" onclick="answer('q4','sad',1,'calm',1)">想被陪伴</button>
+  <button class="btn" onclick="answer('q4','calm',2,'tired',1)">想独自一人待着</button>
+  <button class="btn" onclick="answer('q4','irritated',1,'anxious',1)">想释放压力</button>
+  <button class="btn" onclick="answer('q4','tired',1,'sad',1)">想获得一点能量</button>
+  <button class="btn" onclick="answer('q4','happy',2)">想继续保持好状态</button>
+</div>
+
+<div id="result" class="page">
+  <p>送你一首歌</p>
+  <div id="song"></div>
+  <p id="quote"></p>
+  <button class="restart" onclick="restart()">再来一次</button>
+</div>
+
+<script>
+const scores = { happy: 0, calm: 0, anxious: 0, sad: 0, irritated: 0, tired: 0 };
+
+const data = {
+  happy: {
+    songs: ["《你要跳舞吗》- 新裤子", "《第一天》- 孙燕姿", "《晴天》- 周杰伦", "《开心往前飞》- Vivi"],
+    quote: "保持这个状态，今天值得被记住！"
+  },
+  calm: {
+    songs: ["《贝加尔湖畔》- 李健", "《稻香》- 周杰伦", "《慢慢喜欢你》- 莫文蔚", "《夏天的风》- 温岚"],
+    quote: "平静本身就是一种力量，好好享受此刻。"
+  },
+  anxious: {
+    songs: ["《夜空中最亮的星》- 逃跑计划", "《起风了》- 买辣椒也用券", "《光年之外》- G.E.M.", "《平凡之路》- 朴树"],
+    quote: "看不清方向的时候，先走好脚下的这一步就好。"
+  },
+  sad: {
+    songs: ["《路过人间》- 郁可唯", "《消愁》- 毛不易", "《后来》- 刘若英", "《温柔》- 五月天"],
+    quote: "今天已经很不容易了，允许自己歇一歇。"
+  },
+  irritated: {
+    songs: ["《倔强》- 五月天", "《海阔天空》- Beyond", "《无名之辈》- 陈雪燃", "《逆光》- 孙燕姿"],
+    quote: "你的感受是合理的，别让情绪替你做决定。"
+  },
+  tired: {
+    songs: ["《晚安》- 颜人中", "《好好睡吧》- 告五人", "《孤独的总和》- 张汶芳", "《小幸运》- 田馥甄"],
+    quote: "不必太纠结于当下，也不必太忧虑未来。"
+  }
+};
+
+function answer(page, mood1, score1, mood2, score2) {
+  scores[mood1] += score1;
+  if (mood2) scores[mood2] += score2;
+  document.getElementById(page).classList.remove('active');
+  const next = { q1: 'q2', q2: 'q3', q3: 'q4', q4: 'result' };
+  const nextPage = next[page];
+  if (nextPage === 'result') {
+    showResult();
+  } else {
+    document.getElementById(nextPage).classList.add('active');
+  }
+}
+
+function showResult() {
+  const topMood = Object.keys(scores).reduce((a, b) => scores[a] >= scores[b] ? a : b);
+  const item = data[topMood];
+  const song = item.songs[Math.floor(Math.random() * item.songs.length)];
+  document.getElementById("song").textContent = song;
+  document.getElementById("quote").textContent = item.quote;
+  document.getElementById("result").classList.add('active');
+}
+
+function restart() {
+  Object.keys(scores).forEach(k => scores[k] = 0);
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('q1').classList.add('active');
+}
+</script>
+
+</body>
+</html>
