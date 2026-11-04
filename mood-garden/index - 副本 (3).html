@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>情绪花园</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#fdf6ec; --bg2:#f5e9d8; --panel:#fffaf2; 
+  --txt:#4a3f35; --dim:#a89a8a; --accent:#e8a33d; --line:rgba(120,90,60,.12);
+  --sky-top:#bfe0f0; --sky-bot:#ffe9c9; --ground-top:#a8d08d; --ground-bot:#7ab55c;
+}
+body.season-spring{--sky-top:#bfe0f0;--sky-bot:#ffe9c9;--ground-top:#a8d08d;--ground-bot:#7ab55c}
+body.season-summer{--sky-top:#9fd0f5;--sky-bot:#fff2c8;--ground-top:#9ccf6e;--ground-bot:#69a84a}
+body.season-autumn{--sky-top:#e8c9a0;--sky-bot:#ffe0b0;--ground-top:#c9a86a;--ground-bot:#a07a45}
+body.season-winter{--sky-top:#d5e3f0;--sky-bot:#f0f4f8;--ground-top:#c8d4dc;--ground-bot:#a8b8c4}
+
+body{
+  font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  background:var(--bg2); color:var(--txt);
+  display:flex; justify-content:center; align-items:center;
+  min-height:100vh; overflow:hidden;
+  color-scheme: light;
+}
+#app{
+  width:100%; max-width:520px; height:100vh; max-height:900px;
+  display:flex; flex-direction:column; position:relative;
+  background:var(--bg); box-shadow:0 0 60px rgba(120,90,60,.15);
+  overflow: hidden;
+}
+
+.page{position:absolute;inset:0;display:none;flex-direction:column}
+.page.active{display:flex}
+
+/* ===== 欢迎引导页 ===== */
+#page-welcome {
+  z-index: 50; background: var(--bg);
+  display: none; flex-direction: column;
+  justify-content: center; align-items: center;
+  padding: 30px;
+  text-align: center;
+}
+#page-welcome.active { display: flex; }
+.welcome-card {
+  background: #ffffff; padding: 30px 24px; border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(120,90,60,.08); border: 1px solid var(--line);
+  max-width: 360px; width: 100%; animation: slideUp .6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes slideUp { from{opacity:0; transform:translateY(20px)} to{opacity:1; transform:translateY(0)} }
+.welcome-card h2 { font-size: 22px; margin-bottom: 8px; color: var(--txt); letter-spacing: 1px; }
+.welcome-card p.sub { font-size: 12px; color: var(--dim); margin-bottom: 24px; }
+.welcome-rules { text-align: left; margin-bottom: 28px; font-size: 13px; line-height: 1.7; color: #5d5046; }
+.welcome-rules .rule-item { display: flex; margin-bottom: 14px; }
+.welcome-rules .r-ico { font-size: 20px; margin-right: 12px; line-height: 1.2; }
+.btn-start {
+  background: var(--accent); color: #fff; border: none;
+  width: 100%; padding: 14px; border-radius: 12px; font-size: 15px;
+  font-weight: 600; cursor: pointer; font-family: inherit;
+  box-shadow: 0 6px 16px rgba(232,163,61,.3); transition: .2s;
+}
+.btn-start:active { transform: scale(0.96); }
+
+/* ===== 常规页面 ===== */
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:12px 16px 8px;flex-shrink:0;position:relative;z-index:10}
+.topbar h1{font-size:16px;font-weight:600;letter-spacing:1.5px}
+.topbar .sub{font-size:10px;color:var(--dim)}
+.topbar .reset-btn{background:none;border:1px solid var(--line);border-radius:12px;padding:3px 8px;font-size:10px;color:var(--dim);cursor:pointer;margin-left:8px}
+.topbar .reset-btn:hover{background:rgba(120,90,60,.05)}
+
+#garden-wrap{flex:1;position:relative;overflow:hidden;min-height:0;background:#bfe0f0}
+canvas{display:block;width:100%;height:100%;position:absolute;top:0;left:0}
+
+#mood-panel{padding:10px 12px 12px;flex-shrink:0;background:var(--bg);position:relative;z-index:10}
+.mood-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}
+.mood-btn{
+  display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 2px;
+  border-radius:10px;cursor:pointer;background:#ffffff;
+  border:1px solid var(--line);transition:.16s;font-size:10px;color:var(--txt);
+  user-select:none;position:relative;box-shadow:0 2px 6px rgba(120,90,60,.05)
+}
+.mood-btn:hover{background:#fff;transform:translateY(-2px);box-shadow:0 4px 12px rgba(120,90,60,.1)}
+.mood-btn:active{transform:scale(.93)}
+.mood-btn .emoji{font-size:18px}
+.mood-btn .lv{position:absolute;top:4px;right:4px;font-size:9px;color:#fff;background:var(--accent);border-radius:8px;padding:1px 4px;font-weight:600;opacity:0;transition:.3s}
+.mood-btn .lv.show{opacity:1}
+
+#note-row{display:flex;gap:6px}
+#note{flex:1;background:#fff;border:1px solid var(--line);border-radius:9px;padding:8px 11px;color:var(--txt);font-size:12px;outline:none;font-family:inherit}
+.hint{text-align:center;font-size:9px;color:var(--dim);margin-top:6px}
+
+#care-banner{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(200,140,100,.94);color:#fff;font-size:11px;padding:7px 14px;border-radius:20px;white-space:nowrap;opacity:0;transition:opacity .5s;pointer-events:none;box-shadow:0 4px 20px rgba(0,0,0,.15);z-index:5}
+#care-banner.show{opacity:1}
+
+#popup{position:fixed;inset:0;background:rgba(60,45,30,.4);display:none;justify-content:center;align-items:center;z-index:100;padding:20px}
+#popup.show{display:flex}
+.popup-card{background:var(--panel);border-radius:16px;padding:22px 24px;max-width:300px;width:100%;box-shadow:0 20px 60px rgba(120,90,60,.3);text-align:center;animation:popIn .25s ease;border:1px solid var(--line)}
+@keyframes popIn{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+.popup-card .p-emoji{font-size:40px}
+.popup-card .p-name{font-size:15px;font-weight:600;margin:8px 0 4px}
+.popup-card .p-date{font-size:11px;color:var(--dim)}
+.popup-card .p-note{margin-top:14px;padding:12px;background:rgba(120,90,60,.05);border-radius:10px;font-size:13px;line-height:1.5;text-align:left;min-height:20px}
+.popup-card .p-note.empty{color:var(--dim);font-style:italic;font-size:11px;text-align:center}
+.popup-card .p-close{margin-top:16px;padding:9px 24px;border-radius:20px;background:rgba(120,90,60,.08);border:none;color:var(--txt);font-size:13px;cursor:pointer;font-family:inherit}
+.popup-card .p-del{margin-top:10px;background:none;border:none;color:#c0563b;font-size:11px;cursor:pointer;opacity:.7}
+
+.tabbar{display:flex;flex-shrink:0;border-top:1px solid var(--line);background:var(--panel);position:relative;z-index:10}
+.tab{flex:1;padding:10px 0 14px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;font-size:10px;color:var(--dim);transition:.2s}
+.tab.on{color:var(--accent)}
+.tab .ico{font-size:18px}
+
+.page-body{flex:1;overflow-y:auto;padding:8px 16px 16px;min-height:0}
+.week-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.week-nav .wn-btn{width:34px;height:34px;border-radius:50%;background:rgba(120,90,60,.06);border:none;color:var(--txt);font-size:16px;cursor:pointer}
+.week-nav .wn-label{font-size:13px;color:var(--dim)}
+.week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:18px}
+.day-cell{background:rgba(255,255,255,.7);border-radius:10px;padding:8px 2px;display:flex;flex-direction:column;align-items:center;gap:4px;min-height:76px;border:1px solid var(--line)}
+.day-cell .dow{font-size:9px;color:var(--dim)}
+.day-cell .dot{width:9px;height:9px;border-radius:50%;background:var(--dim);opacity:.3}
+.day-cell .dot.has{opacity:1}
+.day-cell .mini-moods{display:flex;flex-wrap:wrap;justify-content:center;gap:2px;margin-top:2px}
+.week-snap{background:rgba(255,255,255,.6);border-radius:14px;padding:12px;margin-bottom:18px;border:1px solid var(--line)}
+.week-snap .ws-title{font-size:11px;color:var(--dim);margin-bottom:8px}
+.week-snap canvas{display:block;width:100%;height:140px;border-radius:8px;position:relative}
+
+.stat-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+.stat-card{background:rgba(255,255,255,.7);border-radius:12px;padding:14px;border:1px solid var(--line)}
+.stat-card .sc-num{font-size:26px;font-weight:700;color:var(--accent)}
+.section-title{font-size:12px;color:var(--dim);margin:16px 0 8px}
+.bar-chart{display:flex;flex-direction:column;gap:7px}
+.bar-row{display:flex;align-items:center;gap:8px;font-size:11px}
+.bar-row .br-emoji{width:20px;text-align:center}
+.bar-row .br-track{flex:1;height:8px;background:rgba(120,90,60,.08);border-radius:4px;overflow:hidden}
+.bar-row .br-fill{height:100%;border-radius:4px;transition:width .6s ease}
+.bar-row .br-num{width:28px;text-align:right;color:var(--dim)}
+.export-row{display:flex;gap:10px;margin-top:8px}
+.btn{flex:1;padding:11px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--txt);font-size:12px;cursor:pointer;font-family:inherit}
+.btn.primary{background:rgba(232,163,61,.15);border-color:rgba(232,163,61,.4);color:#b87820}
+.milestone{display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,.7);border-radius:10px;margin-bottom:8px;font-size:12px;border:1px solid var(--line)}
+</style>
+</head>
+<body>
+<div id="app">
+  
+  <!-- 欢迎引导页 -->
+  <div class="page active" id="page-welcome">
+    <div class="welcome-card">
+      <h2>🌱 欢迎来到情绪花园</h2>
+      <p class="sub">在这里，每一种情绪都会留下痕迹</p>
+      
+      <div class="welcome-rules">
+        <div class="rule-item">
+          <span class="r-ico">✍️</span>
+          <div><b>写下心声</b><br>点击情绪前，可以在底部的输入框里，先写下此刻想说的话。</div>
+        </div>
+        <div class="rule-item">
+          <span class="r-ico">🌻</span>
+          <div><b>种植情绪</b><br>选择底部的情绪按钮记录当下，点得越多，它长得越旺。</div>
+        </div>
+        <div class="rule-item">
+          <span class="r-ico">🌦️</span>
+          <div><b>生长周期</b><br>从种子到满级开花，同一种情绪点满 7 次，就会绽放最美的姿态。</div>
+        </div>
+        <div class="rule-item">
+          <span class="r-ico">👆</span>
+          <div><b>时光回看</b><br>点击花园里长出的花朵或水坑，可以回看当时写下的文字。</div>
+        </div>
+      </div>
+      
+      <button class="btn-start" id="btn-enter">进入我的花园</button>
+    </div>
+  </div>
+
+  <!-- 记录页 -->
+  <div class="page" id="page-record">
+    <div class="topbar">
+      <h1>情绪花园</h1>
+      <div style="display:flex;align-items:center">
+        <span class="sub" id="rec-count">0 颗种子</span>
+        <button class="reset-btn" id="btn-reset">重置</button>
+      </div>
+    </div>
+    <div id="garden-wrap">
+      <canvas id="cv"></canvas>
+      <div id="care-banner">💛 花园有点阴郁了，记得关照自己</div>
+    </div>
+    <div id="mood-panel">
+      <div class="mood-grid" id="grid"></div>
+      <div id="note-row">
+        <!-- 强化了这里的提示语 -->
+        <input id="note" placeholder="可以在点击情绪前，先在这里写下你想说的话…" maxlength="60">
+      </div>
+      <div class="hint">同种情绪点得越多，长得越旺 · 点击实体可回看</div>
+    </div>
+  </div>
+
+  <div class="page" id="page-review">
+    <div class="topbar"><h1>回看</h1><span class="sub">每周花园快照</span></div>
+    <div class="page-body">
+      <div class="week-nav">
+        <button class="wn-btn" id="wn-prev">‹</button>
+        <span class="wn-label" id="wn-label"></span>
+        <button class="wn-btn" id="wn-next">›</button>
+      </div>
+      <div class="week-grid" id="week-grid"></div>
+      <div class="week-snap">
+        <div class="ws-title" id="snap-title">本周花园快照</div>
+        <canvas id="snap-cv"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="page" id="page-stats">
+    <div class="topbar"><h1>统计</h1><span class="sub">你的花园数据</span></div>
+    <div class="page-body">
+      <div class="stat-cards">
+        <div class="stat-card"><div class="sc-num" id="st-total">0</div><div class="sc-label">累计记录</div></div>
+        <div class="stat-card"><div class="sc-num" id="st-days">0</div><div class="sc-label">坚持天数</div></div>
+      </div>
+      <div class="section-title">情绪分布</div>
+      <div class="bar-chart" id="bar-chart"></div>
+      <div class="section-title">成长里程碑</div>
+      <div id="milestones"></div>
+      
+      <div class="section-title">帮助与设置</div>
+      <div class="export-row" style="margin-bottom:10px">
+        <button class="btn" id="btn-help" style="width:100%">📖 重新查看教程</button>
+      </div>
+
+      <div class="section-title">导出</div>
+      <div class="export-row">
+        <button class="btn primary" id="exp-img">📷 保存花园图片</button>
+        <button class="btn" id="exp-json">💾 导出 JSON</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabbar">
+    <div class="tab on" data-page="record"><span class="ico">🌱</span><span>记录</span></div>
+    <div class="tab" data-page="review"><span class="ico">📖</span><span>回看</span></div>
+    <div class="tab" data-page="stats"><span class="ico">📊</span><span>统计</span></div>
+  </div>
+</div>
+
+<div id="popup"><div class="popup-card">
+  <div class="p-emoji" id="pp-emoji"></div>
+  <div class="p-name" id="pp-name"></div>
+  <div class="p-date" id="pp-date"></div>
+  <div class="p-note" id="pp-note"></div>
+  <button class="p-close" id="pp-close">关闭</button><br>
+  <button class="p-del" id="pp-del">删除这条记录</button>
+</div></div>
+
+<script>
+window.onerror = function(msg) { console.log("捕捉到错误:", msg); return true; };
+
+const MOODS = [
+  { key:'joy',    emoji:'🌞', name:'开心', kind:'plant', color:'#ffd166', petal:'#ffb703' },
+  { key:'calm',   emoji:'🌿', name:'平静', kind:'plant', color:'#7fb069' },
+  { key:'love',   emoji:'💗', name:'温暖', kind:'plant', color:'#ff8fab', petal:'#fb6f92' },
+  { key:'tired',  emoji:'💨', name:'疲惫', kind:'wind',  entity:'none' }, 
+  { key:'sad',    emoji:'🌧️', name:'难过', kind:'rain',  entity:'puddle' }, 
+  { key:'anxious',emoji:'☁️', name:'焦虑', kind:'cloud', entity:'none' },
+  { key:'angry',  emoji:'⚡', name:'生气', kind:'thunder',entity:'none' }, 
+  { key:'empty',  emoji:'🌫️', name:'茫然', kind:'fog',   entity:'none' }, 
+];
+const NEG = ['sad','tired','anxious','angry','empty'];
+const getMood = k => MOODS.find(m=>m.key===k) || MOODS[1];
+
+const STORE_KEY='emotion-garden-final-v6';
+let records = JSON.parse(localStorage.getItem(STORE_KEY)||'[]');
+function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(records)); }
+
+function countByMood(){
+  const c={}; MOODS.forEach(m=>c[m.key]=0);
+  records.forEach(r=>{ if(c[r.mood]!==undefined) c[r.mood]++; });
+  return c;
+}
+
+function levelOf(n){ return n<=0?0 : n>=7?7 : n; }
+
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+let W=0, H=0, DPR=1;
+let plants=[], entities=[], particles=[], hitBoxes=[];
+let gardenMood=1, windPhase=0, thunderFlash=0, lastThunder=0;
+
+function resize(){
+  const wrap = document.getElementById('garden-wrap');
+  if(!wrap) return;
+  const rect = wrap.getBoundingClientRect();
+  W = Math.max(rect.width || 300, 300);
+  H = Math.max(rect.height || 300, 300);
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width = W * DPR; cv.height = H * DPR;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+
+function rebuild(){
+  if(!W || !H) return;
+  plants=[]; entities=[]; hitBoxes=[];
+  const counts=countByMood();
+  const groundY=H*0.92;
+
+  const plantMoods=MOODS.filter(m=>m.kind==='plant');
+  plantMoods.forEach((m,mi)=>{
+    const n=counts[m.key];
+    if(n<=0) return;
+    const lv=levelOf(n);
+    const slots = lv>=7?3 : 1; 
+    for(let k=0;k<slots;k++){
+      const baseX=(mi+0.5)/plantMoods.length;
+      const spread=0.08;
+      const x=W*(baseX+(slots===1?0:(k-(slots-1)/2)*spread))+Math.sin(mi*5.1+k)*8;
+      const y=groundY-(lv-1)*4+Math.cos(mi*3.3+k)*4;
+      const p={x,y,mood:m,lv,h:10+lv*6+Math.sin(mi*2.7+k)*4,
+        phase:Math.random()*Math.PI*2,swayBase:0.6+Math.random()*0.8,
+        scale:0.75+Math.random()*0.45,rec:lastRecordOf(m.key,k)};
+      plants.push(p);
+      hitBoxes.push({x,y,r:20,rec:p.rec});
+    }
+  });
+
+  const weatherMoods=MOODS.filter(m=>m.kind!=='plant');
+  weatherMoods.forEach((m,wi)=>{
+    const n=counts[m.key];
+    if(n<=0) return;
+    const lv=levelOf(n);
+    
+    if (m.entity === 'puddle') {
+      const count = lv>=7?3 : lv;
+      for(let k=0;k<count;k++){
+        const x=W*(0.2+k*0.3)+Math.sin(wi*4+k*1.7)*12; 
+        const y=groundY+8+Math.cos(wi*2+k)*3;
+        const ent={x,y,mood:m,lv,kind:m.entity,phase:Math.random()*Math.PI*2,scale:0.8+Math.random()*0.4,rec:lastRecordOf(m.key,k)};
+        entities.push(ent);
+        hitBoxes.push({x,y,r:22,rec:ent.rec});
+      }
+    }
+  });
+  updateWeather();
+}
+
+function lastRecordOf(key,k){
+  const arr=records.filter(r=>r.mood===key);
+  if(!arr.length) return null;
+  return arr[Math.min(arr.length-1,k)];
+}
+
+let weather={rain:0,cloud:0,thunder:0,wind:0,fog:0};
+function updateWeather(){
+  const c=countByMood();
+  weather.rain=levelOf(c['sad']); weather.cloud=levelOf(c['anxious']);
+  weather.thunder=levelOf(c['angry']); weather.wind=levelOf(c['tired']); weather.fog=levelOf(c['empty']);
+  
+  const recent=records.slice(-12);
+  if(recent.length<6){ gardenMood=1; setCare(false); }
+  else{
+    const negCount=recent.filter(r=>NEG.includes(r.mood)).length;
+    const ratio=negCount/recent.length;
+    gardenMood=ratio>=0.6?0.75:ratio>=0.4?0.85:1;
+    setCare(ratio>=0.6);
+  }
+}
+function setCare(show){ document.getElementById('care-banner').classList.toggle('show',show); }
+
+function getSeason(){
+  const days=uniqueDays();
+  if(days>=100) return 'winter';
+  if(days>=30) return 'autumn';
+  return 'spring';
+}
+function applySeason(){ document.body.className='season-'+getSeason(); }
+
+let t0=performance.now();
+function loop(now){
+  const t=(now-t0)/1000;
+  try { draw(t,1/60); } catch(e) {}
+  requestAnimationFrame(loop);
+}
+
+function draw(t,dt){
+  if(!W || !H) { requestAnimationFrame(loop); return; }
+
+  windPhase+=dt*(0.6+weather.wind*0.5);
+  const cs=getComputedStyle(document.body);
+  const skyTop=cs.getPropertyValue('--sky-top').trim()||'#bfe0f0';
+  const skyBot=cs.getPropertyValue('--sky-bot').trim()||'#ffe9c9';
+  const grTop=cs.getPropertyValue('--ground-top').trim()||'#a8d08d';
+  const grBot=cs.getPropertyValue('--ground-bot').trim()||'#7ab55c';
+
+  ctx.clearRect(0,0,W,H);
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,mixDark(skyTop,1-gardenMood));
+  g.addColorStop(0.78,mixDark(skyBot,1-gardenMood));
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+  const season=getSeason();
+  const haloColor=season==='winter'?'220,225,235':season==='autumn'?'255,200,130':season==='summer'?'255,220,120':'255,240,200';
+  const mx=W*0.78,my=H*0.15;
+  const halo=ctx.createRadialGradient(mx,my,4,mx,my,90);
+  halo.addColorStop(0,`rgba(${haloColor},${0.35*gardenMood})`);
+  halo.addColorStop(1,`rgba(${haloColor},0)`);
+  ctx.fillStyle=halo;ctx.beginPath();ctx.arc(mx,my,90,0,7);ctx.fill();
+
+  drawSkyClouds(t);
+
+  const groundY=H*0.92;
+  const gg=ctx.createLinearGradient(0,groundY-30,0,H);
+  gg.addColorStop(0,mixDark(grTop,1-gardenMood));
+  gg.addColorStop(1,mixDark(grBot,1-gardenMood));
+  ctx.fillStyle=gg;
+  ctx.beginPath();ctx.moveTo(0,groundY);
+  for(let x=0;x<=W;x+=20)ctx.lineTo(x,groundY+Math.sin(x*0.02)*3-4);
+  ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.closePath();ctx.fill();
+
+  entities.forEach(e=>drawEntity(e,t));
+  
+  ctx.save();
+  ctx.globalAlpha=0.75+0.25*gardenMood;
+  plants.forEach(p=>drawPlant(p,t));
+  ctx.restore();
+
+  drawRain(t,dt);
+  drawFogPatches(t);
+  drawWindLines(t);
+  drawThunder(t);
+  updateParticles(t,dt);
+}
+
+function drawSkyClouds(t){
+  const c=weather.cloud;
+  if(c<=0) return;
+  ctx.fillStyle=`rgba(100,110,120,${0.04+c*0.03})`;
+  ctx.fillRect(0,0,W,H*0.5);
+  for(let i=0;i<c;i++){
+    const x=((t*8+i*140)%(W+160))-80;
+    const y=H*0.1+i*18;
+    ctx.fillStyle=`rgba(140,150,160,${0.12+c*0.04})`;
+    ctx.beginPath();ctx.ellipse(x,y,50,14,0,0,7);ctx.fill();
+  }
+}
+
+function drawEntity(e,t){
+  const {x,y,lv}=e;
+  const s=e.scale;
+  ctx.save();ctx.translate(x,y);ctx.scale(s,s);ctx.globalAlpha=0.85+0.15*gardenMood;
+
+  if(e.kind==='puddle'){
+    const r=12+lv*3;
+    ctx.fillStyle=`rgba(120,160,200,${0.35+lv*0.05})`;
+    ctx.beginPath();ctx.ellipse(0,0,r,r*0.35,0,0,7);ctx.fill();
+    for(let k=0;k<2+lv;k++){
+      const ph=((t*0.6+k*0.4+e.phase)%1);
+      ctx.strokeStyle=`rgba(150,190,220,${0.6*(1-ph)})`;ctx.lineWidth=1.2;
+      ctx.beginPath();ctx.ellipse(0,0,r*ph*0.9,r*ph*0.3,0,0,7);ctx.stroke();
+    }
+    ctx.fillStyle=`rgba(255,255,255,${0.5})`;
+    ctx.beginPath();ctx.ellipse(-r*0.3,-r*0.1,r*0.25,r*0.1,0,0,7);ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawPlant(p,t){
+  const {x,y,mood}=p;
+  const w=weather.wind;
+  const windBend=w*0.08; 
+  const sway=Math.sin(t*p.swayBase+p.phase+windPhase*0.8)*(1.4+w*0.8);
+  const bend=windBend*20+sway;
+  
+  const s=p.scale;
+  ctx.save();ctx.translate(x,y);ctx.scale(s,s);ctx.globalAlpha=(gardenMood<1?0.8+0.2*gardenMood:1);
+
+  const lv=p.lv, h=p.h;
+  if(mood.key==='joy'||mood.key==='love'){
+    ctx.strokeStyle='#5d7a4a';ctx.lineWidth=1.6;ctx.lineCap='round';
+    const topX=bend*0.6, topY=-h;
+    
+    if(lv>=2){
+      ctx.beginPath();ctx.moveTo(0,0);ctx.quadraticCurveTo(bend*0.3,topY*0.5,topX,topY);ctx.stroke();
+    }
+    
+    if(lv>=3){
+      ctx.fillStyle='#6b8a52';
+      ctx.beginPath();ctx.ellipse(bend*0.2-4,topY*0.55,4.5,2.4,-0.6,0,7);ctx.fill();
+      if(lv>=4){
+        ctx.beginPath();ctx.ellipse(bend*0.2+4,topY*0.35,4,2.2,0.6,0,7);ctx.fill();
+      }
+    }
+    
+    if(lv===1){
+      ctx.fillStyle='#8a6a45';ctx.beginPath();ctx.ellipse(0,-2,3.5,2.5,0,0,7);ctx.fill();
+      ctx.strokeStyle='#6b5a45';ctx.lineWidth=.8;ctx.beginPath();ctx.moveTo(0,-4);ctx.lineTo(0,-7);ctx.stroke();
+    } else if(lv===2){
+      ctx.fillStyle=mood.color;
+      ctx.beginPath();ctx.ellipse(topX,topY+4,2.5,3.5,0,0,7);ctx.fill();
+      ctx.beginPath();ctx.ellipse(topX-3,topY+2,2,3,-0.5,0,7);ctx.fill();
+    } else if(lv===3 || lv===4){
+      const px=topX,py=topY;
+      ctx.fillStyle=mood.color;
+      ctx.beginPath();ctx.ellipse(px,py, 3.5+lv*0.3, 4.5+lv*0.3, 0, 0, 7);ctx.fill();
+    } else {
+      const px=topX,py=topY; 
+      const petals=lv>=7?7:5; 
+      const pSize = 3 + (lv-4)*1.2; 
+      
+      ctx.fillStyle=mood.color;
+      for(let k=0;k<petals;k++){
+        const a=k/petals*Math.PI*2+t*0.1;
+        ctx.beginPath();ctx.ellipse(px+Math.cos(a)*(4+lv),py+Math.sin(a)*(4+lv),pSize,pSize,a,0,7);ctx.fill();
+      }
+      ctx.fillStyle=mood.petal||mood.color;
+      ctx.beginPath();ctx.arc(px,py,2.6+lv*0.4,0,7);ctx.fill();
+      
+      if(lv===7){
+        ctx.fillStyle='rgba(255,230,150,0.6)';
+        ctx.beginPath();ctx.arc(px,py,8+Math.sin(t*3)*2,0,7);ctx.fill();
+      }
+    }
+  } else if(mood.key==='calm'){
+    ctx.strokeStyle=mood.color;ctx.lineWidth=1.8;ctx.lineCap='round';
+    const blades=lv; 
+    for(let k=0;k<blades;k++){
+      const off=(k-(blades-1)/2)*3;
+      const hh = h * (0.3 + (lv/7)*0.7); 
+      ctx.beginPath();ctx.moveTo(off,0);
+      ctx.quadraticCurveTo(off+bend*0.5,-hh*0.6,off+bend,-hh-k*2);ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+function drawRain(t,dt){
+  const r=weather.rain;
+  if(r<=0)return;
+  if(Math.random()<r*0.15) particles.push({x:Math.random()*W,y:-10,vy:200+Math.random()*100,type:'rain',life:1});
+}
+function drawFogPatches(t){
+  const f=weather.fog;
+  if(f<=0)return;
+  for(let i=0;i<f;i++){
+    const x=((t*12+i*120)%(W+140))-70; const y=H*0.6+i*30;
+    ctx.fillStyle=`rgba(200,205,210,${0.05+f*0.025})`;
+    ctx.beginPath();ctx.ellipse(x,y,60,18,0,0,7);ctx.fill();
+  }
+}
+function drawWindLines(t){
+  const w=weather.wind;
+  if(w<=0)return;
+  ctx.save();ctx.strokeStyle=`rgba(150,180,210,${0.2+w*0.08})`;ctx.lineWidth=1.2;
+  const lines=w; 
+  for(let i=0;i<lines;i++){
+    const y=H*0.25+i*(H*0.6/lines)+Math.sin(t*2+i)*8;
+    const len=40+w*20; 
+    const x0=((t*(100+w*50)+i*120)%(W+len))-len;
+    ctx.beginPath();ctx.moveTo(x0,y);ctx.quadraticCurveTo(x0+len*0.5,y-6,x0+len,y);ctx.stroke();
+  }
+  ctx.restore();
+}
+function drawThunder(t){
+  const th=weather.thunder;
+  if(th<=0)return;
+  if(t-lastThunder>3-th*0.2&&Math.random()<0.3){thunderFlash=1;lastThunder=t;}
+  if(thunderFlash>0){
+    ctx.fillStyle=`rgba(255,250,220,${thunderFlash*0.4})`;ctx.fillRect(0,0,W,H);
+    if(thunderFlash>0.7){
+      ctx.strokeStyle=`rgba(255,255,230,${thunderFlash})`;ctx.lineWidth=2.5;
+      let sx=W*(0.2+Math.random()*0.6), sy=0;
+      ctx.beginPath();ctx.moveTo(sx,sy);
+      for(let k=1;k<=5;k++){ sx+=(Math.random()-0.5)*40; sy+=H*0.08; ctx.lineTo(sx,sy); }
+      ctx.stroke();
+    }
+    thunderFlash-=0.06; if(thunderFlash<0)thunderFlash=0;
+  }
+}
+function updateParticles(t,dt){
+  if(gardenMood>0.8&&weather.cloud===0&&weather.rain===0&&Math.random()<0.02)
+    particles.push({x:Math.random()*W,y:H*0.3+Math.random()*H*0.5,vy:-8-Math.random()*10,type:'spark',life:1});
+  particles=particles.filter(pt=>pt.life>0);
+  particles.forEach(pt=>{
+    pt.y+=pt.vy*dt;
+    if(pt.type==='rain'){
+      ctx.strokeStyle=`rgba(120,160,210,${0.5*pt.life})`;ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(pt.x,pt.y);ctx.lineTo(pt.x-1,pt.y+8);ctx.stroke();
+      if(pt.y>H*0.92) pt.life=0;
+    } else if(pt.type==='spark'){
+      ctx.fillStyle=`rgba(255,230,150,${0.6*Math.sin(t*2+pt.x)})`;
+      ctx.beginPath();ctx.arc(pt.x,pt.y,1.5,0,7);ctx.fill();
+      if(pt.y<-10) pt.life=0;
+    }
+    pt.life-=(pt.type==='rain'?0.5:0.15)*dt;
+  });
+}
+
+function hex(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+function toRgb(a){return `rgb(${a[0]|0},${a[1]|0},${a[2]|0})`;}
+function mixDark(color,darkAmt){const p=hex(color);const f=1-darkAmt*0.3;return toRgb([p[0]*f,p[1]*f,p[2]*f]);}
+
+function addRecord(moodKey,note){
+  records.push({mood:moodKey,note:note||'',ts:Date.now()});
+  save(); rebuild(); refreshMoodLevels(); updateCount();
+}
+function updateCount(){document.getElementById('rec-count').textContent=records.length+' 颗种子';}
+
+function refreshMoodLevels(){
+  const c=countByMood();
+  MOODS.forEach(m=>{
+    const el=document.querySelector(`.mood-btn[data-mood="${m.key}"] .lv`);
+    if(el){
+      const lv=c[m.key];
+      if(lv>0){el.textContent=lv>=7?'满级':lv;el.classList.add('show');}
+      else{el.textContent='';el.classList.remove('show');}
+    }
+  });
+}
+
+cv.addEventListener('click',e=>{
+  const rect=cv.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  for(let i=hitBoxes.length-1;i>=0;i--){
+    const hb=hitBoxes[i];
+    if(!hb.rec)continue;
+    const dx=mx-hb.x, dy=my-hb.y;
+    if(dx*dx+dy*dy<hb.r*hb.r*1.5){showPopup(hb.rec);return;}
+  }
+});
+
+let currentPopupRec=null;
+function showPopup(rec){
+  currentPopupRec=rec; const m=getMood(rec.mood);
+  document.getElementById('pp-emoji').textContent=m.emoji;
+  document.getElementById('pp-name').textContent=m.name;
+  const d=new Date(rec.ts);
+  document.getElementById('pp-date').textContent=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const noteEl=document.getElementById('pp-note');
+  if(rec.note){noteEl.textContent=rec.note;noteEl.classList.remove('empty');}
+  else{noteEl.textContent='（当时没有留下文字）';noteEl.classList.add('empty');}
+  document.getElementById('popup').classList.add('show');
+}
+document.getElementById('pp-close').onclick=()=>document.getElementById('popup').classList.remove('show');
+document.getElementById('pp-del').onclick=()=>{
+  if(!currentPopupRec)return;
+  const idx=records.indexOf(currentPopupRec);
+  if(idx>=0){records.splice(idx,1);save();rebuild();refreshMoodLevels();updateCount();}
+  document.getElementById('popup').classList.remove('show');
+};
+
+document.getElementById('btn-reset').onclick=()=>{
+  if(confirm("确定要清空花园，重新种下种子吗？")){
+    records=[]; save(); rebuild(); refreshMoodLevels(); updateCount();
+  }
+};
+
+function pad(n){return n<10?'0'+n:''+n;}
+function dayKey(ts){const d=new Date(ts);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+function uniqueDays(){return new Set(records.map(r=>dayKey(r.ts))).size;}
+
+let weekOffset=0;
+function getWeekStart(offset){
+  const now=new Date();const dow=now.getDay();
+  const monday=new Date(now);monday.setDate(now.getDate()-((dow+6)%7)+offset*7);monday.setHours(0,0,0,0);
+  return monday;
+}
+function renderWeek(){
+  const start=getWeekStart(weekOffset);const end=new Date(start);end.setDate(start.getDate()+7);
+  const dows=['一','二','三','四','五','六','日'];
+  const grid=document.getElementById('week-grid');grid.innerHTML='';
+  const todayKey=dayKey(Date.now());
+  for(let i=0;i<7;i++){
+    const day=new Date(start);day.setDate(start.getDate()+i);
+    const key=dayKey(day.getTime());
+    const dayRecs=records.filter(r=>dayKey(r.ts)===key);
+    const cell=document.createElement('div');
+    cell.className='day-cell'+(key===todayKey?' today':'');
+    const dotCls=dayRecs.length?'dot has':'dot';
+    const dotColor=dayRecs.length?getMood(dayRecs[dayRecs.length-1].mood).color:'';
+    const mini=dayRecs.slice(-4).map(r=>`<span>${getMood(r.mood).emoji}</span>`).join('');
+    cell.innerHTML=`<div class="dow">${dows[i]}</div>
+      <div class="${dotCls}" style="background:${dotColor||'#ccc'}"></div>
+      <div style="font-size:9px;color:var(--dim)">${day.getDate()}</div>
+      <div class="mini-moods">${mini}</div>`;
+    grid.appendChild(cell);
+  }
+  document.getElementById('wn-label').textContent=`${start.getFullYear()}年${start.getMonth()+1}月${start.getDate()}日 起`;
+  document.getElementById('wn-next').disabled=weekOffset>=0;
+  renderSnap(start,end);
+}
+function renderSnap(start,end){
+  const cvs=document.getElementById('snap-cv');const rect=cvs.getBoundingClientRect();
+  const w=rect.width||300,h=140;
+  cvs.width=w*2;cvs.height=h*2;
+  const c=cvs.getContext('2d');c.scale(2,2);
+  const cs=getComputedStyle(document.body);
+  const st=cs.getPropertyValue('--sky-top').trim()||'#bfe0f0';
+  const sb=cs.getPropertyValue('--sky-bot').trim()||'#ffe9c9';
+  const gt=cs.getPropertyValue('--ground-top').trim()||'#a8d08d';
+  const g=c.createLinearGradient(0,0,0,h);g.addColorStop(0,st);g.addColorStop(0.7,sb);
+  c.fillStyle=g;c.fillRect(0,0,w,h);
+  c.fillStyle=gt;c.beginPath();c.moveTo(0,h*0.8);
+  for(let x=0;x<=w;x+=20)c.lineTo(x,h*0.8+Math.sin(x*0.05)*3);
+  c.lineTo(w,h);c.lineTo(0,h);c.fill();
+  const weekRecs=records.filter(r=>r.ts>=start.getTime()&&r.ts<end.getTime());
+  weekRecs.forEach((r,i)=>{
+    const x=20+(i/Math.max(weekRecs.length-1,1))*(w-40)+Math.sin(i*3)*6;
+    const y=h*0.8+Math.cos(i*5)*4;
+    c.font='14px sans-serif';c.textAlign='center';c.fillText(getMood(r.mood).emoji,x,y);
+  });
+  document.getElementById('snap-title').textContent=`${start.getMonth()+1}/${start.getDate()} - ${end.getMonth()+1}/${end.getDate()} 花园快照`;
+}
+document.getElementById('wn-prev').onclick=()=>{weekOffset--;renderWeek();};
+document.getElementById('wn-next').onclick=()=>{if(weekOffset<0){weekOffset++;renderWeek();}};
+
+function renderStats(){
+  document.getElementById('st-total').textContent=records.length;
+  document.getElementById('st-days').textContent=uniqueDays();
+  const counts=countByMood(); const total=records.length||1;
+  const chart=document.getElementById('bar-chart');chart.innerHTML='';
+  MOODS.forEach(m=>{
+    const n=counts[m.key]; const pct=(n/total*100).toFixed(0);
+    const color=m.color||(m.kind==='rain'?'#7aa2c7':m.kind==='thunder'?'#e0a030':m.kind==='cloud'?'#8a9aa8':m.kind==='wind'?'#a8b8c0':m.kind==='fog'?'#b0b8c4':'#c9a86a');
+    const row=document.createElement('div');row.className='bar-row';
+    row.innerHTML=`<span class="br-emoji">${m.emoji}</span>
+      <div class="br-track"><div class="br-fill" style="width:${pct}%;background:${color}"></div></div>
+      <span class="br-num">${n}</span>`;
+    chart.appendChild(row);
+  });
+  const days=uniqueDays();
+  const milestones=[
+    {ico:'🌱',txt:'种下第一颗种子',desc:'完成 1 次记录',done:records.length>=1},
+    {ico:'🌿',txt:'花园初具雏形',desc:'坚持 7 天',done:days>=7},
+    {ico:'🌸',txt:'花开满园',desc:'累计 30 条记录',done:records.length>=30},
+    {ico:'🍂',txt:'走过一季',desc:'满 30 天，进入秋季',done:days>=30},
+    {ico:'❄️',txt:'四季轮回',desc:'满 100 天，进入冬季',done:days>=100},
+  ];
+  const ms=document.getElementById('milestones');ms.innerHTML='';
+  milestones.forEach(m=>{
+    const el=document.createElement('div');el.className='milestone'+(m.done?'':' locked');
+    el.innerHTML=`<span class="ms-ico">${m.ico}</span><div class="ms-txt">${m.txt}<div class="ms-desc">${m.desc}</div></div><span>${m.done?'✅':'🔒'}</span>`;
+    ms.appendChild(el);
+  });
+}
+
+document.getElementById('btn-enter').onclick=()=>{
+  document.getElementById('page-welcome').classList.remove('active');
+  document.getElementById('page-record').classList.add('active');
+  setTimeout(()=>{ resize(); rebuild(); requestAnimationFrame(loop); }, 50);
+};
+document.getElementById('btn-help').onclick=()=>{
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-welcome').classList.add('active');
+};
+
+document.getElementById('exp-img').onclick=()=>{
+  const tmp=document.createElement('canvas');
+  tmp.width=cv.width;tmp.height=cv.height;
+  const tc=tmp.getContext('2d');
+  tc.fillStyle='#fdf6ec';tc.fillRect(0,0,tmp.width,tmp.height);
+  tc.drawImage(cv,0,0);
+  tc.fillStyle='rgba(74,63,53,.7)';tc.font=`${28*DPR}px sans-serif`;tc.textAlign='right';
+  tc.fillText('我的情绪花园',tmp.width-30*DPR,40*DPR);
+  const a=document.createElement('a');a.href=tmp.toDataURL('image/png');
+  a.download=`情绪花园_${dayKey(Date.now())}.png`;a.click();
+};
+document.getElementById('exp-json').onclick=()=>{
+  const data=JSON.stringify({exportedAt:new Date().toISOString(),records},null,2);
+  const blob=new Blob([data],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`情绪花园数据_${dayKey(Date.now())}.json`;a.click();
+};
+
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.onclick=()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    tab.classList.add('on');
+    const page=tab.dataset.page;
+    document.getElementById('page-'+page).classList.add('active');
+    if(page==='review'){weekOffset=0;renderWeek();}
+    if(page==='stats'){renderStats();}
+    if(page==='record'){resize();rebuild();}
+  };
+});
+
+function buildGrid(){
+  const grid=document.getElementById('grid');
+  MOODS.forEach(m=>{
+    const btn=document.createElement('div');
+    btn.className='mood-btn';btn.dataset.mood=m.key;
+    btn.innerHTML=`<span class="lv"></span><span class="emoji">${m.emoji}</span><span>${m.name}</span>`;
+    btn.onclick=()=>{
+      const note=document.getElementById('note').value.trim();
+      addRecord(m.key,note);
+      document.getElementById('note').value='';
+      btn.animate([{transform:'scale(1)'},{transform:'scale(0.85)'},{transform:'scale(1)'}],{duration:220});
+    };
+    grid.appendChild(btn);
+  });
+}
+
+function init(){
+  buildGrid();
+  applySeason();
+  refreshMoodLevels();
+  updateCount();
+  
+  setTimeout(() => {
+    resize();
+    rebuild();
+    if(document.getElementById('page-record').classList.contains('active')){
+      requestAnimationFrame(loop);
+    }
+  }, 150);
+}
+
+init();
+</script>
+</body>
+</html>
